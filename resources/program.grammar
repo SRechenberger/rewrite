@@ -1,0 +1,3 @@
+program    ::= rule (<whitespace>? rule)*
+rule       ::= term <whitespace>? <'->'> <whitespace>? term <whitespace>? <'.'>
+
