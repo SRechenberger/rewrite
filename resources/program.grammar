@@ -1,3 +1,30 @@
-program    ::= rule (<whitespace>? rule)*
-rule       ::= term <whitespace>? <'->'> <whitespace>? term <whitespace>? <'.'>
+(* Programs *)
+program     ::= rule (<whitespace>? rule)* <whitespace>?
+	        declaration <whitespace>?
+	        (assertion <whitespace>?)*
+rule        ::= term <whitespace>? <'->'> <whitespace>? term <whitespace>? <'.'>
+assertion   ::= <'assert'>
+	    	<whitespace> constraint
+		(<whitespace>? <','> <whitespace>? constraint)*
+		<whitespace>? <'.'>
+declaration ::= <'declare'> (<whitespace>? ident)+ <'.'>
+
+(* Constraints *)
+<constraint> ::= positive | negative
+positive     ::= atom
+negative     ::= <'not'> <whitespace> atom
+<atom>       ::= <'{'> <whitespace>? ident <whitespace> term <whitespace>? <'}'>
+	       | true
+	       | false
+true 	     ::= <#'true'>
+false 	     ::= <#'false'>
+
+(* Terms *)
+<term>     ::= func | const | var
+var        ::= vident
+const      ::= ident
+func       ::= <'('> <whitespace>? ident (<whitespace> term)+ <whitespace>? <')'>
+<ident>    ::= #'[a-z\d]+'
+<vident>   ::= #'[A-Z][a-zA-Z\d]*'
+whitespace ::= #'\s+'
 

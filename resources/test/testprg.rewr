@@ -2,6 +2,9 @@ true -> true.
 false -> false.
 (if 0 THEN ELSE) -> ELSE.
 (if I THEN ELSE) -> THEN.
+(loop 0 VAL ACC) -> ACC.
+(loop (s I) VAL ACC) -> (loop I VAL (cons (calc (s I) VAL) ACC)).
+(calc N VAL) -> (add N VAL). 
 (mult 0 M) -> 0.
 (mult (s N) M) -> (add M (mult N M)).
 (add 0 M) -> M.
@@ -15,3 +18,14 @@ false -> false.
 5 -> (s 4).
 omega -> omega2.
 omega2 -> omega.
+
+
+{nat 0}.
+{zero 0}.
+{nat N} -> {nat (s N)}.
+{nat N} -> {nonzero (s N)}.
+{nat N}, {nat M} -> {nat (add N M)}.
+{nonzero N} -> {nonzero (add N M)}.
+{nonzero M} -> {nonzero (add N M)}.
+
+{P THEN}, {P ELSE} -> {P (if X THEN ELSE)}.

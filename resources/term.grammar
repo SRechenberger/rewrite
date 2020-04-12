@@ -1,7 +1,0 @@
-<term>     ::= func | const | var
-var        ::= vident
-const      ::= ident
-func       ::= <'('> ident (<whitespace> term)+ <')'>
-<ident>    ::= #'[a-z\d]+'
-<vident>   ::= #'[A-Z]+'
-whitespace ::= #'\s+'

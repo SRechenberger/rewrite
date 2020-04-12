@@ -4,23 +4,22 @@
   (:use [clojure.core.match :only [match]]
         [clojure.string :only [join]]))
 
-(def rewr-program-grammar-file "resources/program.grammar")
-
-(def rewr-term-grammar-file "resources/term.grammar")
-
-(def rewr-term-grammar (slurp rewr-term-grammar-file))
+(def rewr-program-grammar-file
+  "resources/program.grammar")
 
 (def rewr-program-grammar
-  (str (slurp rewr-program-grammar-file)
-       rewr-term-grammar))
+  (slurp rewr-program-grammar-file))
 
 (def parse-rewr
   (insta/parser rewr-program-grammar))
 
 (defn parse-term
   [input]
-  (first ((insta/parser rewr-term-grammar) input)))
+  (first (parse-rewr input :start :term)))
 
+(defn parse-constraint
+  [input]
+  (first (parse-rewr input :start :constraint)))
 
 (defn match-term
   [term pattern]
