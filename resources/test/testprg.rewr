@@ -2,6 +2,10 @@ true -> true.
 false -> false.
 (if 0 THEN ELSE) -> ELSE.
 (if I THEN ELSE) -> THEN.
+(eq 0 0) -> true.
+(eq 0 (s M)) -> false.
+(eq (s N) 0) -> false.
+(eq (s N) (s M)) -> (eq N M).
 (loop 0 VAL ACC) -> ACC.
 (loop (s I) VAL ACC) -> (loop I VAL (cons (calc (s I) VAL) ACC)).
 (calc N VAL) -> (add N VAL). 
@@ -19,13 +23,13 @@ false -> false.
 omega -> omega2.
 omega2 -> omega.
 
+@declare nat zero.
 
-{nat 0}.
-{zero 0}.
-{nat N} -> {nat (s N)}.
-{nat N} -> {nonzero (s N)}.
-{nat N}, {nat M} -> {nat (add N M)}.
-{nonzero N} -> {nonzero (add N M)}.
-{nonzero M} -> {nonzero (add N M)}.
+@assert {nat 0}.
+@assert {zero 0}.
+@assert not {nat N}, {nat (s N)}.
+@assert not {nat N}, not {zero (s N)}.
+@assert not {nat N}, not {nat M}, {nat (add N M)}.
+@assert {zero N}, not {zero (add N M)}.
+@assert {zero M}, not {zero (add N M)}.
 
-{P THEN}, {P ELSE} -> {P (if X THEN ELSE)}.

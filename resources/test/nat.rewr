@@ -1,0 +1,11 @@
+0 -> 0.
+(s N) -> (s N).
+
+(add 0 M) -> M.
+(add (s N) M) -> (add N (s M)).
+
+@declare zero.
+
+@assert {zero 0}.
+@assert not {zero (s X)}.
+

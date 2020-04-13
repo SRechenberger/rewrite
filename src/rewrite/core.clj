@@ -1,9 +1,13 @@
 (ns rewrite.core
   (:gen-class)
-  (:require [instaparse.core :as insta])
+  (:require [instaparse.core :as insta]
+            [rolling-stones.core :as sat :refer [! at-least at-most exactly]])
   (:use [clojure.core.match :only [match]]
-        [clojure.string :only [join]]))
+        [clojure.string :only [join]]
+        [clojure.java.shell :only [sh]]))
 
+
+;;; Parser
 (def rewr-program-grammar-file
   "resources/program.grammar")
 
@@ -21,6 +25,8 @@
   [input]
   (first (parse-rewr input :start :constraint)))
 
+
+;;; Evaluation
 (defn match-term
   [term pattern]
   (match [term pattern]
@@ -35,7 +41,6 @@
            (let [matched (apply vector (map match-term terms patterns))]
              (when-not (some #(= nil %) matched)
                (apply merge matched))))
-         
          :else
          nil))
 
@@ -44,12 +49,12 @@
   "Applies a substitution to the given term"
   [subst term]
   (match [term]
+         [nil] term
          [[:var v]] (subst v)
          [[:const _]] term
          [([:func f & terms] :seq)]
-         (into []
-               (concat [:func f]
-                       (map #(apply-substitution subst %) terms)))))
+         (vec (concat [:func f]
+                      (map #(apply-substitution subst %) terms)))))
 
 
 (defn apply-rule
@@ -111,11 +116,100 @@
         term'
         (recur term' (eval-one-step term' program))))))
 
+;;; Analysis
+(def solver-file "resources/test/solver.pl")
 
+(defn free-vars
+  [term]
+  (match [term]
+         [[:const _]] []
+         [[:var x]] [x]
+         [([:func _ & terms] :seq)] (vec (apply concat (map free-vars terms)))))
+
+(defn derive-assertions-from-rules
+  [rules properties]
+  (if (or (seq? properties) (list? properties))
+    (apply concat (map #(derive-assertions-from-rules rules %) properties))
+    (apply concat
+           (map (fn [[head body]]
+                  (let [free (free-vars head)
+                        subst (apply merge
+                                     (map (fn [x] {x [:var (str (gensym x))]}) free))]
+                    [[[:negative properties (apply-substitution subst head)]
+                      [:positive properties (apply-substitution subst body)]]
+                     [[:positive properties (apply-substitution subst head)]
+                      [:negative properties (apply-substitution subst body)]]]))
+                rules))))
+
+(defn analyze-program
+  [program]
+  (let [[rules assertions properties]
+        (loop [[stmt & stmts] program
+               [rs as ps] [[] [] []]]
+          (if (nil? stmt)
+            [rs as ps]                   
+            (case (first stmt)
+              :rule (recur stmts [(conj rs (rest stmt)) as ps])
+              :assertion (recur stmts [rs (conj as (rest stmt)) ps])
+              :declaration (recur stmts [rs as (rest stmt)]))))
+        all-assertions
+        (concat assertions
+                (derive-assertions-from-rules rules properties))
+        stones-cnf
+        (map (partial map #(case (first %)
+                             :negative (! (rest %))
+                             :positive (rest %))) all-assertions)]
+    (loop [[s & ss] (sat/solutions-symbolic-cnf stones-cnf)]
+      (when s
+        (println "Input:")
+        (println (join "\n" (map #(str "  " %) (stones->prolog s))))
+        (println "Output:")
+        (let [result ((comp (partial feed-to-prolog solver-file)
+                            stones->prolog)
+                      s)]
+          (if (= (result :exit) 0)
+            (do
+              (println "SAT")
+              (print (result :out)))
+            (do
+              (println "UNSAT")
+              (recur ss))))))))
+          
+
+(defn stones->prolog
+  [constraints]
+  (map #(if (sat/negative? %)
+          (let [literal (sat/negate %)]
+                         ; (println literal)
+                         (sexpr->func (str "not_" (first literal))
+                                      (second literal)))
+                             
+          (sexpr->func (first %) (second %)))
+       constraints))
+
+(defn sexpr->func
+  [constr term]
+  (print-rewr-prolog-style [:func constr term]))
+  
+(defn print-rewr-prolog-style
+  [term]
+  (match [term]
+         [[:const z]] z
+         [[:var x]] x
+         [([:func f & terms] :seq)]
+         (str f "(" (join ", " (map print-rewr-prolog-style terms)) ")")))
+
+(defn feed-to-prolog
+  [solver-file terms]
+  (sh "swipl" "-l" solver-file "-q" "-g" "main"
+      :in (str (join ", " terms) ".")))
+
+;;; CLI
 (defn print-rewr
   [term]
   (match [term]
          [[:const z]] z
+         [[:var x]] x
          [([:func f & terms] :seq)]
          (str "(" f " " (join " " (map print-rewr terms)) ")")))
 
@@ -125,7 +219,6 @@
   [program]
   (let [term (parse-term (read-line))]
     (when-not (= term exit-term)
-      ; (println (eval-rewr program term))
       (println (print-rewr (eval-rewr program term)))
       true)))
 
@@ -134,5 +227,7 @@
   [& args]
   (let [prg-file (first args)]
     (if prg-file
-      (let [prg (prepare-program (parse-rewr (slurp prg-file)))]
-        (while (rewr-read-eval-print prg))))))
+      (let [program (parse-rewr (slurp prg-file))
+            rules (filter #(= :rule (first %)) (drop 1 program))                                
+            rules' (prepare-program rules)]
+        (while (rewr-read-eval-print rules'))))))

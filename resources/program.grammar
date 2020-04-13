@@ -2,12 +2,12 @@
 program     ::= rule (<whitespace>? rule)* <whitespace>?
 	        declaration <whitespace>?
 	        (assertion <whitespace>?)*
-rule        ::= term <whitespace>? <'->'> <whitespace>? term <whitespace>? <'.'>
-assertion   ::= <'assert'>
-	    	<whitespace> constraint
+assertion   ::= <#'@assert'>
+		<whitespace> constraint
 		(<whitespace>? <','> <whitespace>? constraint)*
 		<whitespace>? <'.'>
-declaration ::= <'declare'> (<whitespace>? ident)+ <'.'>
+declaration ::= <#'@declare'> (<whitespace>? ident)+ <'.'>
+rule        ::= term <whitespace>? <'->'> <whitespace>? term <whitespace>? <'.'>
 
 (* Constraints *)
 <constraint> ::= positive | negative
